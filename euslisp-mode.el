@@ -3,14 +3,14 @@
 ;; Author: iory <ab.ioryz@gmail.com>
 ;; Maintainer: iory <ab.ioryz@gmail.com>
 ;; Created: April 13, 2016
-;; Version: 0.0.1
+;; Version: 0.0.2
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
 
 
 ;;; Constants =================================================================
 
-(defconst euslisp-mode-version "0.0.1"
+(defconst euslisp-mode-version "0.0.2"
   "Euslisp mode version number.")
 
 (defconst euslisp-output-buffer-name "*euslisp-output*"
@@ -71,6 +71,17 @@
                (funcall method state indent-point)))))
     )
   )
+
+(font-lock-add-keywords
+ 'euslisp-mode
+ (list
+  (list (concat "(" (regexp-opt '("defforeign") t) "\\>") '(1 font-lock-keyword-face nil t))
+  (list "\\(self\\)\\>" '(1 font-lock-constant-face nil t))
+  (list "\\(\\*\\w\+\\*\\)\\>" '(1 font-lock-constant-face nil t))
+  (list "\\(#\\(\\+\\|\\-\\)\.\*\\)" '(1 font-lock-variable-name-face))
+  (list (concat "(" (regexp-opt '("send") t) "\\>") '(1 font-lock-constant-face nil t))
+  )
+ )
 
 
 (provide 'euslisp-mode)
