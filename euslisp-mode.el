@@ -79,7 +79,10 @@
   (list "\\(self\\)\\>" '(1 font-lock-constant-face nil t))
   (list "\\(\\*\\w\+\\*\\)\\>" '(1 font-lock-constant-face nil t))
   (list "\\(#\\(\\+\\|\\-\\)\.\*\\)" '(1 font-lock-variable-name-face))
-  (list (concat "(" (regexp-opt '("send") t) "\\>") '(1 font-lock-constant-face nil t))
+  (list "\\(send-all\\)" '(1 font-lock-constant-face nil t))
+  (list "\\(send-super\\)" '(1 font-lock-constant-face nil t))
+  (list "\\(throw-error\\)" '(1 font-lock-warning-face nil t))
+  (list "\\(warning\\)\\>" '(1 font-lock-warning-face nil t))
   )
  )
 
