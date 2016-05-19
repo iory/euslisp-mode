@@ -10,11 +10,20 @@
 
 ;;; Constants =================================================================
 
-(defconst euslisp-mode-version "0.0.2"
+(defconst euslisp-mode-version "0.0.3"
   "Euslisp mode version number.")
 
 (defconst euslisp-output-buffer-name "*euslisp-output*"
   "Name of temporary buffer for euslisp command output.")
+
+(defconst euslisp-mode-source-dir
+  (if load-file-name
+      (file-name-directory load-file-name)
+    default-directory
+    )
+  "Source dir of euslisp-mode")
+
+(load (concatenate #'string euslisp-mode-source-dir "euslisp-find-definition.el"))
 
 ;;; Mode Definition  ==========================================================
 
