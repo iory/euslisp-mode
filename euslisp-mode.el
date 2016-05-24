@@ -3,7 +3,7 @@
 ;; Author: iory <ab.ioryz@gmail.com>
 ;; Maintainer: iory <ab.ioryz@gmail.com>
 ;; Created: April 13, 2016
-;; Version: 0.0.2
+;; Version: 0.0.3
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
 
