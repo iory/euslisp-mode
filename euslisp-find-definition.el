@@ -27,8 +27,7 @@
 (defun euslisp-extract-load-files ()
   (let ((loads nil)
         (current-point (point)))
-    (goto-char 0) ;;バッファの先頭に移動
-    ;; (count-lines START END) START 位置から END のポイントまでの行数を数える
+    (goto-char 0)
     (loop for i from 1 to (count-lines (point-min) (point-max)) do
           (cond ((string-match-p "(load " (buffer-substring-no-properties (point-at-bol) (point-at-eol)))
                  (push (buffer-substring-no-properties (point-at-bol) (point-at-eol)) loads)
