@@ -122,7 +122,9 @@
 
 (defun euslisp-find-definition-function ()
   (interactive)
-  (load "~/.emacs.d/shellenv.el")
+  (when (file-exists-p "~/.emacs.d/shellenv.el")
+    (load "~/.emacs.d/shellenv.el")
+    )
   (if (and transient-mark-mode mark-active)
       (euslisp-goto-definition (buffer-substring (region-beginning) (region-end)))
     (euslisp-goto-definition (euslisp-print-current-word))
