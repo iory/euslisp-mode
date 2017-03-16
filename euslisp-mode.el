@@ -43,6 +43,19 @@
 (setq auto-mode-alist
       (cons (cons "\\.l\\'" 'euslisp-mode) auto-mode-alist))
 
+;;; Utility Functions ====================================================================
+
+(defun insert-on-shell ()
+  "Insert current functions/class to *shell*."
+  (interactive)
+  (let* ((standard-output (get-buffer "*shell*"))
+         (bounds (bounds-of-thing-at-point 'defun))
+         (start (car bounds))
+         (end (cdr bounds))
+         (pt (point))
+         (d (- pt start)))
+    (princ (buffer-substring start end))))
+
 ;;; Indentation ====================================================================
 
 (defun euslisp-indent-function (indent-point state)
