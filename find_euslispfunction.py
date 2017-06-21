@@ -5,6 +5,7 @@ import os
 import re
 import roslib
 
+
 def main():
     import sys
     if len(sys.argv[1:]) < 1:
@@ -12,7 +13,7 @@ def main():
     inDirs = []
     inDirs.extend([roslib.packages.get_pkg_dir('euslisp'),
                    roslib.packages.get_pkg_dir('roseus'),
-    ])
+                   ])
     inDirs.extend(sys.argv[1:])
     # print(inDirs)
 
@@ -38,19 +39,23 @@ def main():
                     for c, line in enumerate(f.readlines()):
                         for match in matches:
                             if match.search(line):
-                                fileList.append("***".join([os.path.join(dName, filename), str(c), line[:-1].lstrip()]))
+                                fileList.append(
+                                    "***".join([os.path.join(dName, filename), str(c), line[:-1].lstrip()]))
                                 break
 
-    class_path = os.path.join(roslib.packages.get_pkg_dir('euslisp'), "jskeus/eus/doc/classes")
+    class_path = os.path.join(roslib.packages.get_pkg_dir(
+        'euslisp'), "jskeus/eus/doc/classes")
     if os.path.exists(class_path):
         with open(class_path, 'r') as f:
             for c, line in enumerate(f.readlines()):
                 for match in matches:
                     if match.search(line):
-                        fileList.append("***".join([class_path, str(c), line[:-1].lstrip()]))
+                        fileList.append(
+                            "***".join([class_path, str(c), line[:-1].lstrip()]))
                         break
     fileList = list(set(fileList))
     print("****".join(fileList))
+
 
 if __name__ == "__main__":
     main()
