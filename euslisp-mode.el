@@ -3,14 +3,14 @@
 ;; Author: iory <ab.ioryz@gmail.com>
 ;; Maintainer: iory <ab.ioryz@gmail.com>
 ;; Created: April 13, 2016
-;; Version: 0.0.4
+;; Version: 0.0.5
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
 
 
 ;;; Constants =================================================================
 
-(defconst euslisp-mode-version "0.0.4"
+(defconst euslisp-mode-version "0.0.5"
   "Euslisp mode version number.")
 
 (defconst euslisp-output-buffer-name "*euslisp-output*"
