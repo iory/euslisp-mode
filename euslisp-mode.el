@@ -45,7 +45,7 @@
 
 ;;; Utility Functions ====================================================================
 
-(defun insert-on-shell ()
+(defun euslisp-insert-on-shell ()
   "Insert current functions/class to *shell*."
   (interactive)
   (let* ((standard-output (get-buffer "*shell*"))
