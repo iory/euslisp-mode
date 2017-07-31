@@ -10,7 +10,6 @@
 
 (require 's)
 (require 'exec-path-from-shell)
-(require 'helm)
 
 
 ;;; Constants =================================================================
@@ -30,9 +29,6 @@
 
 (defconst euslisp-choose-directory-default-directory "~/"
   "Initial starting point.")
-
-(load (concatenate #'string euslisp-mode-source-dir "euslisp-find-definition.el"))
-
 
 (defvar euslisp-shell--parent-buffer nil)
 (defvar euslisp-shell--interpreter)
