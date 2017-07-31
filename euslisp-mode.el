@@ -7,6 +7,9 @@
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
 
+(require 's)
+(require 'exec-path-from-shell)
+
 
 ;;; Constants =================================================================
 
@@ -22,6 +25,9 @@
     default-directory
     )
   "Source dir of euslisp-mode")
+
+(defconst euslisp-choose-directory-default-directory "~/"
+  "Initial starting point.")
 
 (load (concatenate #'string euslisp-mode-source-dir "euslisp-find-definition.el"))
 
@@ -39,10 +45,17 @@ Do not set this variable directly, instead use
 Do not set this variable directly, instead use
 `euslisp-shell-set-prompt-regexp'.")
 
-(defcustom euslisp-shell-interpreter "irteus"
-  "Default Euslisp interpreter for shell."
-  :type 'string
-  :group 'euslisp)
+
+(cond ((eq system-type 'gnu/linux)
+       (defcustom euslisp-shell-interpreter "roseus"
+         "Default Euslisp interpreter for shell."
+         :type 'string
+         :group 'euslisp))
+      ((eq system-type 'darwin)
+       (defcustom euslisp-shell-interpreter "irteus"
+         "Default Euslisp interpreter for shell."
+         :type 'string
+         :group 'euslisp)))
 
 (defcustom euslisp-shell-interpreter-args ""
   "Default arguments for the Euslisp interpreter."
@@ -279,7 +292,7 @@ t when called interactively."
    (list (read-string "Euslisp command: ") nil t))
   (let ((process (or process (euslisp-shell-get-process-or-error msg))))
     (when (string-match ".\n+." string) ;; Multiline.
-        (setq string (replace-regexp-in-string "\n" " " string)))
+      (setq string (replace-regexp-in-string "\n" " " string)))
     (comint-send-string process string)
     (when (or (not (string-match "\n\\'" string))
               (string-match "\n[ \t].*\n?\\'" string))
@@ -316,26 +329,26 @@ t when called interactively."
   (let ((env (append (when (fboundp #'tramp-get-remote-locale)
                        ;; Emacs<24.4 compat.
                        (list (tramp-get-remote-locale vec)))
-         (copy-sequence env)))
+                     (copy-sequence env)))
         (tramp-end-of-heredoc
          (if (boundp 'tramp-end-of-heredoc)
              tramp-end-of-heredoc
            (md5 tramp-end-of-output)))
-  unset vars item)
+        unset vars item)
     (while env
       (setq item (tramp-compat-split-string (car env) "="))
       (setcdr item (mapconcat 'identity (cdr item) "="))
       (if (and (stringp (cdr item)) (not (string-equal (cdr item) "")))
-    (push (format "%s %s" (car item) (cdr item)) vars)
-  (push (car item) unset))
+          (push (format "%s %s" (car item) (cdr item)) vars)
+        (push (car item) unset))
       (setq env (cdr env)))
     (when vars
       (tramp-send-command
        vec
        (format "while read var val; do export $var=$val; done <<'%s'\n%s\n%s"
-         tramp-end-of-heredoc
-         (mapconcat 'identity vars "\n")
-         tramp-end-of-heredoc)
+               tramp-end-of-heredoc
+               (mapconcat 'identity vars "\n")
+               tramp-end-of-heredoc)
        t))
     (when unset
       (tramp-send-command
@@ -368,6 +381,106 @@ to \"^euslisp-\"."
   (interactive "r")
   (let ((selection (buffer-substring-no-properties from to)))
     (euslisp-shell-send-string selection)))
+
+
+(defun euslisp-path-from-shell-printf (str &optional args)
+  (let* ((printf-bin (or (executable-find "printf") "printf"))
+         (printf-command
+          (concat printf-bin
+                  " '__RESULT\\000" str "\\000__RESULT' "
+                  (mapconcat #'exec-path-from-shell--double-quote args " ")))
+         (shell (exec-path-from-shell--shell))
+         (shell-name (car (last (s-split "/" shell))))
+         (shell-args (append exec-path-from-shell-arguments
+                             (list "-c"
+                                   (if euslisp-path-ros-env
+                                       (if (exec-path-from-shell--standard-shell-p shell)
+                                           (format "source %s/setup.%s && %s" euslisp-path-ros-env shell-name printf-command)
+                                         (if (string-equal shell-name "fish")
+                                             (format "sh -c bass source %s/setup.bash && %s" euslisp-path-ros-env printf-command)
+                                           (error "Not implemented %s" shell-name)))
+                                     (if (exec-path-from-shell--standard-shell-p shell)
+                                         printf-command
+                                       (format "sh -c %s" euslisp-path-ros-env printf-command)))))))
+    (with-temp-buffer
+      (exec-path-from-shell--debug "Invoking shell %s with args %S" shell shell-args)
+      (let ((exit-code (apply #'call-process shell nil t nil shell-args)))
+        (exec-path-from-shell--debug "Shell printed: %S" (buffer-string))
+        (unless (zerop exit-code)
+          (error "Non-zero exit code from shell %s invoked with args %S.  Output was:\n%S"
+                 shell shell-args (buffer-string))))
+      (goto-char (point-min))
+      (if (re-search-forward "__RESULT\0\\(.*\\)\0__RESULT" nil t)
+          (match-string 1)
+        (error "Expected printf output from shell, but got: %S" (buffer-string))))))
+
+(defun euslisp-path-from-shell-getenvs (names)
+  "Get the environment variables with NAMES from the user's shell.
+
+Execute the shell according to `euslisp-path-from-shell-arguments'.
+The result is a list of (NAME . VALUE) pairs."
+  (let* ((random-default (md5 (format "%s%s%s" (emacs-pid) (random) (current-time))))
+         (dollar-names (mapcar (lambda (n) (format "${%s-%s}" n random-default)) names))
+         (values (split-string (euslisp-path-from-shell-printf
+                                (mapconcat #'identity (make-list (length names) "%s") "\\000")
+                                dollar-names) "\0")))
+    (let (result)
+      (while names
+        (prog1
+            (let ((value (car values)))
+              (push (cons (car names)
+                          (unless (string-equal random-default value)
+                            value))
+                    result))
+          (setq values (cdr values)
+                names (cdr names))))
+      result)))
+
+(defcustom euslisp-path-ros-env nil
+  "ROS environment."
+  :type 'string
+  :group 'euslisp)
+
+(defun euslisp-path-from-shell-getenv (name)
+  "Get the environment variable NAME from the user's shell.
+
+Execute the shell as interactive login shell, have it output the
+variable of NAME and return this output as string."
+  (cdr (assoc name (euslisp-path-from-shell-getenvs (list name)))))
+
+(defcustom euslisp-path-from-shell-shell-name nil
+  "If non-nil, use this shell executable.
+Otherwise, use either `shell-file-name' (if set), or the value of
+the SHELL environment variable."
+  :type '(choice
+          (file :tag "Shell executable")
+          (const :tag "Use `shell-file-name' or $SHELL" nil))
+  :group 'euslisp)
+
+
+;;;###autoload
+(defun euslisp-path-from-shell-copy-envs (names)
+  "Set the environment variables with NAMES from the user's shell.
+
+As a special case, if the variable is $PATH, then `euslisp-path' and
+`eshell-path-env' are also set appropriately.  The result is an alist,
+as described by `euslisp-path-from-shell-getenvs'."
+  (let ((pairs (euslisp-path-from-shell-getenvs names)))
+    (when exec-path-from-shell-check-startup-files
+      (exec-path-from-shell--maybe-warn-about-startup-files pairs))
+    (mapc (lambda (pair)
+            (exec-path-from-shell-setenv (car pair) (cdr pair)))
+          pairs)))
+
+(defun euslisp-change-env (env-directory)
+  "Change default source path"
+  (interactive (list (read-directory-name "CATKIN_PATH: " euslisp-choose-directory-default-directory)))
+  (let ((env-path env-directory))
+    (custom-set-variables
+     '(euslisp-path-ros-env ))
+    (euslisp-path-from-shell-copy-envs
+     (list "PATH" "PYTHONPATH" "LD_LIBRARY_PATH" "EUSDIR" "ARCHDIR" "ROS_ROOT" "ROS_PACKAGE_PATH" "ROS_MASTER_URI"
+           "ROS_ETC_DIR" "ROSLISP_PACKAGE_DIRECTORIES" "ROS_DISTRO" "CMAKE_PREFIX_PATH"))))
 
 
 (provide 'euslisp-mode)
