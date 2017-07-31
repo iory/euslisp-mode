@@ -3,7 +3,7 @@
 ;; Author: iory <ab.ioryz@gmail.com>
 ;; Maintainer: iory <ab.ioryz@gmail.com>
 ;; Created: April 13, 2016
-;; Version: 0.0.7
+;; Version: 0.0.8
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
 ;; Package-Requires: ((emacs "23") (s "1.9") (exec-path-from-shell "0") (helm-ag 0.58))
@@ -15,7 +15,7 @@
 
 ;;; Constants =================================================================
 
-(defconst euslisp-mode-version "0.0.7"
+(defconst euslisp-mode-version "0.0.8"
   "Euslisp mode version number.")
 
 (defconst euslisp-output-buffer-name "*euslisp-output*"
