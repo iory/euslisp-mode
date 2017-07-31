@@ -11,3 +11,10 @@ Make sure to place euslisp-mode.el somewhere in the load-path and add the follow
 ```
 (require 'euslisp-mode)
 ```
+
+If you want to set catkin source path, please execute '''(euslisp-change-env)''' or write a following codes in init.el.
+
+```
+(euslisp-change-env "/opt/ros/indigo")
+(euslisp-change-env "/PATH/TO/CATKIN_WORKSPACE")
+```
