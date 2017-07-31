@@ -6,9 +6,11 @@
 ;; Version: 0.0.5
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
+;; Package-Requires: ((emacs "23") (s "1.9") (exec-path-from-shell "0"))
 
 (require 's)
 (require 'exec-path-from-shell)
+(require 'helm)
 
 
 ;;; Constants =================================================================
