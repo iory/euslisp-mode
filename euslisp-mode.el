@@ -6,10 +6,11 @@
 ;; Version: 0.0.6
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
-;; Package-Requires: ((emacs "23") (s "1.9") (exec-path-from-shell "0"))
+;; Package-Requires: ((emacs "23") (s "1.9") (exec-path-from-shell "0") (helm-ag 0.58))
 
 (require 's)
 (require 'exec-path-from-shell)
+(require 'helm-ag)
 
 
 ;;; Constants =================================================================
@@ -132,6 +133,46 @@ Do not set this variable directly, instead use
   )
  )
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; find definition ====================================================================
+
+(defun euslisp-print-current-word ()
+  "print current word."
+  (interactive)
+  (let (p1 p2)
+    (save-excursion
+      (skip-chars-backward "-a-z0-9")
+      (setq p1 (point))
+      (skip-chars-forward "-a-z0-9")
+      (setq p2 (point))
+      (message "%s" (buffer-substring-no-properties p1 p2)))))
+
+(defun euslisp-helm-ag (query dirs)
+  "wrapper of helm-ag"
+  (helm-ag--init-state)
+  (let ((dir dirs)
+        targets)
+    (when (listp dir)
+      (setq basedir default-directory
+            targets dir))
+    (let ((helm-ag--default-directory (or basedir dir))
+          (helm-ag--default-target targets))
+      (setq helm-ag--last-query query)
+      (helm-attrset 'search-this-file nil helm-ag-source)
+      (helm-attrset 'name (helm-ag--helm-header helm-ag--default-directory) helm-ag-source)
+      (helm :sources '(helm-ag-source) :buffer "*euslisp-helm-ag*" :keymap helm-ag-map
+            :history 'helm-ag--helm-history))))
+
+(defun euslisp-find-definition-ag (query)
+  "search query by helm-ag"
+  (euslisp-helm-ag (concat "(\\(:|\\(defun |\\(defclass |\\(defmacro |\\(defmethods )" query) (s-split ":" (getenv "ROS_PACKAGE_PATH"))))
+
+(defun euslisp-find-definition-function ()
+  "find defnition of euslisp"
+  (interactive)
+  (if (and transient-mark-mode mark-active)
+      (euslisp-goto-definition (buffer-substring (region-beginning) (region-end)))
+    (euslisp-find-definition-ag (euslisp-print-current-word))))
 
 ;;; Shell ====================================================================
 
