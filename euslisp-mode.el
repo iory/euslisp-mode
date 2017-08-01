@@ -330,8 +330,6 @@ t when called interactively."
   (interactive
    (list (read-string "Euslisp command: ") nil t))
   (let ((process (or process (euslisp-shell-get-process-or-error msg))))
-    (when (string-match ".\n+." string) ;; Multiline.
-      (setq string (replace-regexp-in-string "\n" " " string)))
     (comint-send-string process string)
     (when (or (not (string-match "\n\\'" string))
               (string-match "\n[ \t].*\n?\\'" string))
