@@ -508,6 +508,11 @@ as described by `euslisp-path-from-shell-getenvs'."
             (exec-path-from-shell-setenv (car pair) (cdr pair)))
           pairs)))
 
+(defun euslisp-switch-to-shell ()
+  "Switch to inferior euslisp process buffer."
+  (interactive)
+  (pop-to-buffer (process-buffer (euslisp-shell-get-process-or-error))))
+
 (defun euslisp-change-env (env-directory)
   "Change default source path"
   (interactive (list (read-directory-name "CATKIN_PATH: " euslisp-choose-directory-default-directory)))
