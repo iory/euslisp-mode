@@ -506,6 +506,11 @@ as described by `euslisp-path-from-shell-getenvs'."
             (exec-path-from-shell-setenv (car pair) (cdr pair)))
           pairs)))
 
+(defun euslisp-shell-send-reset-command ()
+  "Send (reset) command to shell."
+  (interactive)
+  (euslisp-shell-send-string "(reset)"))
+
 (defun euslisp-switch-to-shell ()
   "Switch to inferior euslisp process buffer."
   (interactive)
