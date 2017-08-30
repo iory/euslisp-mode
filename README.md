@@ -3,7 +3,7 @@
 euslisp-mode is a major mode for editing Euslisp code(https://github.com/euslisp/EusLisp).
 euslisp-mode is free software, licensed under the GNU GPL.
 
-The latest stable version is euslisp-mode 0.0.8, released on July, 2017.
+The latest stable version is euslisp-mode 0.0.9, released on August, 2017.
 
 ## installation
 Make sure to place euslisp-mode.el somewhere in the load-path and add the following lines to your .emacs file to associate euslisp-mode with .l files:
