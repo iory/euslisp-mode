@@ -1,12 +1,14 @@
 ;;; euslisp-mode.el --- Major mode for Euslisp-formatted text -*- lexical-binding: t; -*-
 
+;; Copyright (C) 2016-2017 iory
+
 ;; Author: iory <ab.ioryz@gmail.com>
 ;; Maintainer: iory <ab.ioryz@gmail.com>
 ;; Created: April 13, 2016
 ;; Version: 0.0.9
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
-;; Package-Requires: ((emacs "23") (s "1.9") (exec-path-from-shell "0") (helm-ag 0.58))
+;; Package-Requires: ((emacs "24.3") (s "1.9") (exec-path-from-shell "0") (helm-ag "0.58"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,6 +22,10 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; This .el file is major mode for euslisp
 
 (require 's)
 (require 'exec-path-from-shell)
@@ -199,13 +205,13 @@ Do not set this variable directly, instead use
     (if euslisp-dedicated-shells
         (if dedproc
             dedproc
-          (run-euslisp (euslisp-shell-parse-command) t)
+          (euslisp-run-euslisp (euslisp-shell-parse-command) t)
           (get-buffer-process dedbufname))
       (if dedproc
           dedproc
         (if proc
             proc
-          (run-euslisp (euslisp-shell-parse-command))
+          (euslisp-run-euslisp (euslisp-shell-parse-command))
           (get-buffer-process bufname))))))
 
 
@@ -277,13 +283,13 @@ machine then modifies `tramp-remote-process-environment' and
                  (euslisp-shell--interpreter-args
                   (mapconcat #'identity args " ")))
             (with-current-buffer buffer
-              (inferior-euslisp-mode))
+              (euslisp-inferior-euslisp-mode))
             (when show (display-buffer buffer))
             (and internal (set-process-query-on-exit-flag process nil))))
         proc-buffer-name))))
 
 
-(defun run-euslisp (&optional cmd dedicated show)
+(defun euslisp-run-euslisp (&optional cmd dedicated show)
   "Run an inferior Euslisp process."
   (interactive
    (if current-prefix-arg
@@ -300,8 +306,8 @@ machine then modifies `tramp-remote-process-environment' and
 
 (defun euslisp-shell-get-buffer ()
   "Return inferior Euslisp buffer for current buffer.
-If current buffer is in `inferior-euslisp-mode', return it."
-  (if (derived-mode-p 'inferior-euslisp-mode)
+If current buffer is in `euslisp-inferior-euslisp-mode', return it."
+  (if (derived-mode-p 'euslisp-inferior-euslisp-mode)
       (current-buffer)
     (let* ((dedicated-proc-name (euslisp-shell-get-process-name t))
            (dedicated-proc-buffer-name (format "*%s*" dedicated-proc-name))
@@ -326,11 +332,11 @@ of `error' with a user-friendly message."
   (or (euslisp-shell-get-process)
       (if interactivep
           (user-error
-           "Start a Euslisp process first with `M-x run-euslisp' or `%s'."
+           "Start a Euslisp process first with `M-x euslisp-run-euslisp' or `%s'."
            ;; Get the binding.
            (key-description
             (where-is-internal
-             #'run-euslisp overriding-local-map t)))
+             #'euslisp-run-euslisp overriding-local-map t)))
         (error
          "No inferior Euslisp process running."))))
 
@@ -417,7 +423,7 @@ to \"^euslisp-\"."
                (cdr pair))))
    (buffer-local-variables from-buffer)))
 
-(define-derived-mode inferior-euslisp-mode comint-mode "Inferior Euslisp"
+(define-derived-mode euslisp-inferior-euslisp-mode comint-mode "Inferior Euslisp"
   (when euslisp-shell--parent-buffer
     (euslisp-util-clone-local-variables euslisp-shell--parent-buffer))
   (compilation-shell-minor-mode 1))
