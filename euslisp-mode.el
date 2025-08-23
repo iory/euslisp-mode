@@ -6,9 +6,9 @@
 ;; Maintainer: iory <ab.ioryz@gmail.com>
 ;; Created: April 13, 2016
 ;; Version: 0.0.9
-;; Keywords: Euslisp, euslisp, GitHub
+;; Keywords: languages, lisp
 ;; URL: https://github.com/iory/euslisp-mode
-;; Package-Requires: ((emacs "24.3") (s "1.9") (exec-path-from-shell "0") (helm-ag "0.58"))
+;; Package-Requires: ((emacs "28.1") (s "1.9") (exec-path-from-shell "1.0") (helm "3.0"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -27,9 +27,21 @@
 
 ;; This .el file is major mode for euslisp
 
-(require 's)
-(require 'exec-path-from-shell)
-(require 'helm-ag)
+;;; Code:
+
+(declare-function s-split "s")
+(declare-function helm-do-grep-1 "helm-grep")
+(declare-function helm-grep-do-git-grep "helm-grep")
+(declare-function exec-path-from-shell-copy-envs "exec-path-from-shell")
+
+(defvar helm-grep-default-command)
+(defvar helm-grep-default-recurse-command)
+
+;; Autoload functions to avoid compilation errors
+(autoload 's-split "s")
+(autoload 'helm-do-grep-1 "helm-grep")
+(autoload 'helm-grep-do-git-grep "helm-grep")
+(autoload 'exec-path-from-shell-copy-envs "exec-path-from-shell")
 
 
 ;;; Constants =================================================================
@@ -43,8 +55,7 @@
 (defconst euslisp-mode-source-dir
   (if load-file-name
       (file-name-directory load-file-name)
-    default-directory
-    )
+    default-directory)
   "Source dir of euslisp-mode")
 
 (defconst euslisp-choose-directory-default-directory "~/"
@@ -91,8 +102,7 @@ Do not set this variable directly, instead use
 (define-derived-mode euslisp-mode lisp-mode "Euslisp"
   "Major mode for editing Euslisp files."
   ;; Indentation
-  (setq lisp-indent-function 'euslisp-indent-function)
-  )
+  (setq lisp-indent-function 'euslisp-indent-function))
 
 ;;;###autoload
 (setq auto-mode-alist
@@ -132,9 +142,7 @@ Do not set this variable directly, instead use
                (lisp-indent-specform method state
                                      indent-point normal-indent))
               (method
-               (funcall method state indent-point)))))
-    )
-  )
+               (funcall method state indent-point)))))))
 
 (font-lock-add-keywords
  'euslisp-mode
@@ -148,9 +156,7 @@ Do not set this variable directly, instead use
   (list (concat "(" (regexp-opt '("send" "send-all" "send-super") t) "\\>") '(1 font-lock-builtin-face nil t))
   (list "\\(\\*[^ ]*\\*\\)" '(1 font-lock-constant-face nil t))
   (list (concat "(" (regexp-opt '("load") t) "\\>") '(1 font-lock-keyword-face nil t))
-  (list (concat "(" (regexp-opt '("setq") t) "\\>") '(1 font-lock-type-face nil t))
-  )
- )
+  (list (concat "(" (regexp-opt '("setq") t) "\\>") '(1 font-lock-type-face nil t))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; find definition ====================================================================
@@ -166,32 +172,46 @@ Do not set this variable directly, instead use
       (setq p2 (point))
       (message "%s" (buffer-substring-no-properties p1 p2)))))
 
-(defun euslisp-helm-ag (query dirs)
-  "wrapper of helm-ag"
-  (helm-ag--init-state)
-  (let ((dir dirs)
-        targets)
-    (when (listp dir)
-      (setq basedir default-directory
-            targets dir))
-    (let ((helm-ag--default-directory (or basedir dir))
-          (helm-ag--default-target targets))
-      (setq helm-ag--last-query query)
-      (helm-attrset 'search-this-file nil helm-ag-source)
-      (helm-attrset 'name (helm-ag--helm-header helm-ag--default-directory) helm-ag-source)
-      (helm :sources '(helm-ag-source) :buffer "*euslisp-helm-ag*" :keymap helm-ag-map
-            :history 'helm-ag--helm-history))))
+(defun euslisp-helm-grep (query dirs)
+  "Search query using helm-grep functions."
+  (condition-case err
+      (progn
+        (require 'helm)
+        (require 'helm-grep)
+        (let ((default-directory (if (listp dirs)
+                                     default-directory
+                                   dirs)))
+          (if (and (listp dirs) (> (length dirs) 1))
+              ;; Multiple directories: use helm-grep with recursive search
+              (helm-do-grep-1 dirs t nil query)
+            ;; Single directory or current buffer
+            (if (and (not (listp dirs))
+                     (file-exists-p (concat dirs "/.git")))
+                ;; Git repository: use git grep
+                (if (fboundp 'helm-grep-do-git-grep)
+                    (helm-grep-do-git-grep dirs)
+                  (helm-do-grep-1 (list dirs) t nil query))
+              ;; Non-git or fallback: use regular grep
+              (helm-do-grep-1 (if (listp dirs) dirs (list dirs)) t nil query)))))
+    (error 
+     (message "Error in helm-grep: %s" err))))
 
-(defun euslisp-find-definition-ag (query)
-  "search query by helm-ag"
-  (euslisp-helm-ag (concat "(\\(:|\\(defun |\\(defclass |\\(defmacro |\\(defmethods )" query) (s-split ":" (getenv "ROS_PACKAGE_PATH"))))
+(defun euslisp-find-definition-grep (query)
+  "Search query using helm-grep."
+  (condition-case err
+      (progn
+        (require 's)
+        (euslisp-helm-grep (concat "(\\(:|\\(defun |\\(defclass |\\(defmacro |\\(defmethods )" query) 
+                           (s-split ":" (or (getenv "ROS_PACKAGE_PATH") ""))))
+    (error 
+     (message "Error loading dependencies: %s" err))))
 
 (defun euslisp-find-definition-function ()
   "find defnition of euslisp"
   (interactive)
   (if (and transient-mark-mode mark-active)
       (euslisp-goto-definition (buffer-substring (region-beginning) (region-end)))
-    (euslisp-find-definition-ag (euslisp-print-current-word))))
+    (euslisp-find-definition-grep (euslisp-print-current-word))))
 
 ;;; Shell ====================================================================
 
@@ -392,7 +412,7 @@ t when called interactively."
            (md5 tramp-end-of-output)))
         unset vars item)
     (while env
-      (setq item (tramp-compat-split-string (car env) "="))
+      (setq item (split-string (car env) "="))
       (setcdr item (mapconcat 'identity (cdr item) "="))
       (if (and (stringp (cdr item)) (not (string-equal (cdr item) "")))
           (push (format "%s %s" (car item) (cdr item)) vars)
