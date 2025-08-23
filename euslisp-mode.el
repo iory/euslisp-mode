@@ -8,7 +8,7 @@
 ;; Version: 0.0.9
 ;; Keywords: Euslisp, euslisp, GitHub
 ;; URL: https://github.com/iory/euslisp-mode
-;; Package-Requires: ((emacs "24.3") (s "1.9") (exec-path-from-shell "0") (helm-ag "0.58"))
+;; Package-Requires: ((emacs "24.3") (s "1.9") (exec-path-from-shell "0") (helm "3.0"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -29,7 +29,9 @@
 
 (require 's)
 (require 'exec-path-from-shell)
-(require 'helm-ag)
+(require 'helm)
+(require 'helm-occur)
+(require 'helm-grep)
 
 
 ;;; Constants =================================================================
@@ -166,32 +168,36 @@ Do not set this variable directly, instead use
       (setq p2 (point))
       (message "%s" (buffer-substring-no-properties p1 p2)))))
 
-(defun euslisp-helm-ag (query dirs)
-  "wrapper of helm-ag"
-  (helm-ag--init-state)
-  (let ((dir dirs)
-        targets)
-    (when (listp dir)
-      (setq basedir default-directory
-            targets dir))
-    (let ((helm-ag--default-directory (or basedir dir))
-          (helm-ag--default-target targets))
-      (setq helm-ag--last-query query)
-      (helm-attrset 'search-this-file nil helm-ag-source)
-      (helm-attrset 'name (helm-ag--helm-header helm-ag--default-directory) helm-ag-source)
-      (helm :sources '(helm-ag-source) :buffer "*euslisp-helm-ag*" :keymap helm-ag-map
-            :history 'helm-ag--helm-history))))
+(defun euslisp-helm-grep (query dirs)
+  "Search query using helm-grep-do-git-grep or helm-occur."
+  (let ((default-directory (if (listp dirs)
+                               default-directory
+                             dirs)))
+    (if (and (listp dirs) (> (length dirs) 1))
+        ;; Multiple directories: use helm-grep with recursive search
+        (let ((helm-grep-default-command "grep -a -d recurse %e -n%cH -e %p %f")
+              (helm-grep-default-recurse-command "grep -a -d recurse %e -n%cH -e %p %f"))
+          (helm-do-grep-1 dirs t nil query))
+      ;; Single directory or current buffer
+      (if (and (not (listp dirs))
+               (file-exists-p (concat dirs "/.git")))
+          ;; Git repository: use git grep
+          (helm-grep-do-git-grep dirs nil query)
+        ;; Non-git or fallback: use regular grep
+        (let ((helm-grep-default-command "grep -a -d recurse %e -n%cH -e %p %f")
+              (helm-grep-default-recurse-command "grep -a -d recurse %e -n%cH -e %p %f"))
+          (helm-do-grep-1 (if (listp dirs) dirs (list dirs)) t nil query))))))
 
-(defun euslisp-find-definition-ag (query)
-  "search query by helm-ag"
-  (euslisp-helm-ag (concat "(\\(:|\\(defun |\\(defclass |\\(defmacro |\\(defmethods )" query) (s-split ":" (getenv "ROS_PACKAGE_PATH"))))
+(defun euslisp-find-definition-grep (query)
+  "Search query using helm-grep."
+  (euslisp-helm-grep (concat "(\\(:|\\(defun |\\(defclass |\\(defmacro |\\(defmethods )" query) (s-split ":" (getenv "ROS_PACKAGE_PATH"))))
 
 (defun euslisp-find-definition-function ()
   "find defnition of euslisp"
   (interactive)
   (if (and transient-mark-mode mark-active)
       (euslisp-goto-definition (buffer-substring (region-beginning) (region-end)))
-    (euslisp-find-definition-ag (euslisp-print-current-word))))
+    (euslisp-find-definition-grep (euslisp-print-current-word))))
 
 ;;; Shell ====================================================================
 
